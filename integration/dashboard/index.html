@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101827">
+<link rel="manifest" href="/manifest.json">
+<title>Prosperity · Live Market Relay</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,Arial;background:#0b1220;color:#e5e7eb}
+body{margin:0;padding:18px;max-width:980px;margin:auto}
+h1{font-size:23px;margin:4px 0}p{color:#9ca3af}
+.card{background:#111c2e;border:1px solid #263449;border-radius:14px;padding:16px;margin:14px 0}
+input,button{font:inherit;border-radius:8px;padding:11px;border:1px solid #334155}
+input{background:#0b1220;color:#fff;width:min(100%,360px);box-sizing:border-box}
+button{background:#2563eb;color:#fff;border:0;font-weight:600}
+.row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+.status{font-size:13px;color:#93c5fd}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:60vh;overflow:auto;background:#08101d;padding:12px;border-radius:8px;font-size:12px}
+.small{font-size:12px;color:#94a3b8}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:9px}
+.metric{background:#0b1627;border:1px solid #263449;border-radius:9px;padding:10px}
+.metric b{display:block;font-size:18px;margin-top:4px}
+.metric span{font-size:11px;color:#94a3b8}
+</style>
+</head>
+<body>
+<h1>Prosperity Signal Desk</h1>
+<p>Windows 915 visible-data relay → Android dashboard</p>
+<div class="card">
+  <div class="row">
+    <input id="token" type="password" placeholder="Pairing token from Windows bridge" autocomplete="off">
+    <button id="connect">Connect</button>
+  </div>
+  <p id="status" class="status">Not connected</p>
+  <p class="small">Use this page on the same trusted Wi-Fi as the Windows PC. This dashboard displays captured visible text; it does not place trades.</p>
+</div>
+<div class="card">
+  <h3>Structured market data</h3>
+  <div id="marketMeta" class="small">Waiting for an authorized structured data adapter…</div>
+  <div id="marketGrid" class="grid"></div>
+  <div id="marketDepth" class="small"></div>
+</div>
+<div class="card">
+  <h3>Latest capture</h3>
+  <div id="meta" class="small">Waiting for a capture from Windows Chrome…</div>
+  <pre id="data">No market data received yet.</pre>
+</div>
+<script>
+let ws;
+const statusEl=document.getElementById("status");
+const tokenEl=document.getElementById("token");
+const metaEl=document.getElementById("meta");
+const dataEl=document.getElementById("data");
+const marketMeta=document.getElementById("marketMeta");
+const marketGrid=document.getElementById("marketGrid");
+const marketDepth=document.getElementById("marketDepth");
+function showMarket(d){
+  const p=d.price||{},g=d.greeks||{},s=(d.straddle||{}).close||{};
+  marketMeta.textContent=(d.symbol||"")+" · "+(d.exchange||"")+" · "+(d.captured_at||"");
+  const values=[["Index value",d.index_value],["LTP",p.ltp],["Open",p.open],["High",p.high],["Low",p.low],["Volume",p.volume],["Open interest",p.open_interest],["Delta",g.delta],["Gamma",g.gamma],["Theta",g.theta],["Vega",g.vega],["IV",g.iv],["CE close",s.ce],["PE close",s.pe],["Synthetic future",s.synthetic_future]];
+  marketGrid.replaceChildren(...values.filter(v=>v[1]!==null&&v[1]!==undefined).map(v=>{
+    const box=document.createElement("div");box.className="metric";
+    const label=document.createElement("span");label.textContent=v[0];
+    const value=document.createElement("b");value.textContent=Number(v[1]).toLocaleString("en-IN",{maximumFractionDigits:2});
+    box.append(label,value);return box;
+  }));
+  const depth=d.depth||{},rows=[...(depth.buy||[]).map(x=>["BUY",x.price,x.quantity]),...(depth.sell||[]).map(x=>["SELL",x.price,x.quantity])];
+  marketDepth.textContent=rows.length?"Depth · "+rows.map(x=>x.join(" / ")).join("  |  "):"No depth values in this update.";
+  const pat=d.pattern||{};if(pat.name){const note=document.createElement("p");note.textContent="Pattern: "+pat.name+" · "+(pat.trend||"")+" · Entry "+(pat.entry??"—")+" · SL "+(pat.stop_loss??"—")+" · Target "+(pat.target??"—");marketDepth.appendChild(note);}
+}
+tokenEl.value=sessionStorage.getItem("prosperityToken")||"";
+function connect(){
+  if(ws) ws.close();
+  const token=tokenEl.value.trim();
+  if(!token){statusEl.textContent="Enter the pairing token shown in the Windows terminal.";return;}
+  sessionStorage.setItem("prosperityToken",token);
+  const host=location.hostname;
+  ws=new WebSocket("ws://"+host+":8766");
+  ws.onopen=()=>ws.send(JSON.stringify({type:"auth",role:"dashboard",token}));
+  ws.onmessage=(event)=>{
+    const msg=JSON.parse(event.data);
+    if(msg.type==="status"){statusEl.textContent="Connected to Prosperity bridge.";}
+    if(msg.type==="market_update"){showMarket(msg.data||{});}
+    if(msg.type==="adapter_error"){marketMeta.textContent="Adapter error: "+(msg.message||"invalid update");}
+    if(msg.type==="snapshot"){
+      const d=msg.data||{};
+      metaEl.textContent="Captured: "+(d.captured_at||"—")+" · "+(d.page_title||"915 page")+" · "+(d.character_count||0)+" characters";
+      dataEl.textContent=d.text||"Empty visible page snapshot.";
+    }
+  };
+  ws.onerror=()=>statusEl.textContent="Connection error. Check Windows bridge and firewall.";
+  ws.onclose=()=>statusEl.textContent="Disconnected. Press Connect to retry.";
+}
+document.getElementById("connect").addEventListener("click",connect);
+if(tokenEl.value) connect();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(()=>{});
+</script>
+</body>
+</html>
