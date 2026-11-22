@@ -43,6 +43,38 @@ Find the Windows PC's IPv4 address (for example, run `ipconfig` and look for the
 
 Enter the pairing token printed by the bridge and connect. You can add the page to your home screen.
 
+## Market fields adopted from the supplied APK
+
+Prosperity now has an independent normalized market-data contract in `bridge/market_models.py`. It covers:
+
+- Live price fields: timestamp, OHLC, LTP, volume, value, bid/offer quantities, average price, price ranges and open interest.
+- Market depth: up to five buy and sell price/quantity levels.
+- Index and instrument identity through symbol, exchange and segment.
+- Option Greeks: Delta, Gamma, Theta, Vega, Rho, IV and the additional sensitivity fields represented in the APK.
+- Straddle candles: CE, PE, strike price, spot price and synthetic future for open/high/low/close.
+- Chart-pattern metadata: pattern, trend, entry, stop-loss, target and analysis text.
+
+The bridge now accepts a structured `market_update` message from an authorized adapter and forwards normalized values to the Android dashboard. Example message shape:
+
+```json
+{
+  "type": "market_update",
+  "data": {
+    "symbol": "NIFTY",
+    "exchange": "NSE",
+    "segment": "FNO",
+    "price": {"ltp": 22450, "open": 22400, "high": 22500, "low": 22380, "volume": 1000, "openInterest": 1234},
+    "depth": {"buy": [{"price": 22449, "qty": 10}], "sell": [{"price": 22451, "qty": 12}]},
+    "greeks": {"delta": 0.52, "gamma": 0.01, "theta": -4.2, "vega": 8.1, "iv": 14.2},
+    "straddle": {"close": {"ce": 120, "pe": 110, "strikePrice": 22450, "spotPrice": 22450, "syntheticFuture": 22452}}
+  }
+}
+```
+
+This is a Prosperity application data contract based on fields found in the uploaded APK. It is not Groww's private socket protocol, does not include Groww endpoints or credentials, and does not itself provide live data access. The existing Chrome extension still captures rendered visible text only; a structured adapter must be connected using a data source and access method you are authorized to use before these cards show live values.
+
+Run the model tests from `integration/bridge` with `py -m unittest -v`.
+
 ## What this prototype does / does not do
 
 - Streams captured visible text snapshots from Windows Chrome to the Android dashboard.
