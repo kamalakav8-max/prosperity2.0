@@ -18,6 +18,10 @@ button{background:#2563eb;color:#fff;border:0;font-weight:600}
 .status{font-size:13px;color:#93c5fd}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:60vh;overflow:auto;background:#08101d;padding:12px;border-radius:8px;font-size:12px}
 .small{font-size:12px;color:#94a3b8}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:9px}
+.metric{background:#0b1627;border:1px solid #263449;border-radius:9px;padding:10px}
+.metric b{display:block;font-size:18px;margin-top:4px}
+.metric span{font-size:11px;color:#94a3b8}
 </style>
 </head>
 <body>
@@ -32,6 +36,12 @@ pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:60vh;overflow:auto;ba
   <p class="small">Use this page on the same trusted Wi-Fi as the Windows PC. This dashboard displays captured visible text; it does not place trades.</p>
 </div>
 <div class="card">
+  <h3>Structured market data</h3>
+  <div id="marketMeta" class="small">Waiting for an authorized structured data adapter…</div>
+  <div id="marketGrid" class="grid"></div>
+  <div id="marketDepth" class="small"></div>
+</div>
+<div class="card">
   <h3>Latest capture</h3>
   <div id="meta" class="small">Waiting for a capture from Windows Chrome…</div>
   <pre id="data">No market data received yet.</pre>
@@ -42,6 +52,22 @@ const statusEl=document.getElementById("status");
 const tokenEl=document.getElementById("token");
 const metaEl=document.getElementById("meta");
 const dataEl=document.getElementById("data");
+const marketMeta=document.getElementById("marketMeta");
+const marketGrid=document.getElementById("marketGrid");
+const marketDepth=document.getElementById("marketDepth");
+function showMarket(d){
+  const p=d.price||{},g=d.greeks||{},s=(d.straddle||{}).close||{};
+  marketMeta.textContent=(d.symbol||"")+" · "+(d.exchange||"")+" · "+(d.captured_at||"");
+  const values=[["LTP",p.ltp],["Open",p.open],["High",p.high],["Low",p.low],["Volume",p.volume],["Open interest",p.open_interest],["Delta",g.delta],["Gamma",g.gamma],["Theta",g.theta],["Vega",g.vega],["IV",g.iv],["CE close",s.ce],["PE close",s.pe],["Synthetic future",s.synthetic_future]];
+  marketGrid.replaceChildren(...values.filter(v=>v[1]!==null&&v[1]!==undefined).map(v=>{
+    const box=document.createElement("div");box.className="metric";
+    const label=document.createElement("span");label.textContent=v[0];
+    const value=document.createElement("b");value.textContent=Number(v[1]).toLocaleString("en-IN",{maximumFractionDigits:2});
+    box.append(label,value);return box;
+  }));
+  const depth=d.depth||{},rows=[...(depth.buy||[]).map(x=>["BUY",x.price,x.quantity]),...(depth.sell||[]).map(x=>["SELL",x.price,x.quantity])];
+  marketDepth.textContent=rows.length?"Depth · "+rows.map(x=>x.join(" / ")).join("  |  "):"No depth values in this update.";
+}
 tokenEl.value=sessionStorage.getItem("prosperityToken")||"";
 function connect(){
   if(ws) ws.close();
@@ -54,6 +80,8 @@ function connect(){
   ws.onmessage=(event)=>{
     const msg=JSON.parse(event.data);
     if(msg.type==="status"){statusEl.textContent="Connected to Prosperity bridge.";}
+    if(msg.type==="market_update"){showMarket(msg.data||{});}
+    if(msg.type==="adapter_error"){marketMeta.textContent="Adapter error: "+(msg.message||"invalid update");}
     if(msg.type==="snapshot"){
       const d=msg.data||{};
       metaEl.textContent="Captured: "+(d.captured_at||"—")+" · "+(d.page_title||"915 page")+" · "+(d.character_count||0)+" characters";
