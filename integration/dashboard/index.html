@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#101827">
+<link rel="manifest" href="/manifest.json">
 <title>Prosperity · Live Market Relay</title>
 <style>
 :root{color-scheme:dark;font-family:system-ui,Arial;background:#0b1220;color:#e5e7eb}
@@ -64,6 +65,7 @@ function connect(){
 }
 document.getElementById("connect").addEventListener("click",connect);
 if(tokenEl.value) connect();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(()=>{});
 </script>
 </body>
 </html>
