@@ -52,7 +52,7 @@ def normalize_market_update(payload: dict) -> dict:
     return {
         "symbol":symbol,"exchange":str(payload.get("exchange","NSE")).upper(),
         "segment":str(payload.get("segment","FNO")).upper(),
-        "captured_at":datetime.now(timezone.utc).isoformat(),"price":price,
+        "captured_at":datetime.now(timezone.utc).isoformat(),"index_value":num(payload.get("index_value", payload.get("value"))),"price":price,
         "depth":{"buy":book(depth.get("buy",depth.get("buyBook"))),"sell":book(depth.get("sell",depth.get("sellBook")))},
         "greeks":greeks,"straddle":straddle,
         "pattern":{"name":str(raw_p.get("name",raw_p.get("pattern","")))[:80],
