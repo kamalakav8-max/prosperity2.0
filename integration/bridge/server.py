@@ -11,12 +11,15 @@ from urllib.parse import urlparse
 
 from websockets.asyncio.server import serve
 
+from market_models import normalize_market_update
+
 ROOT = Path(__file__).resolve().parent.parent / "dashboard"
 HOST = "0.0.0.0"
 HTTP_PORT = 8765
 WS_PORT = 8766
 TOKEN = secrets.token_urlsafe(24)
 latest_snapshot: dict | None = None
+latest_market: dict | None = None
 clients: set = set()
 state_lock = asyncio.Lock()
 
@@ -31,7 +34,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
 
 
 async def ws_handler(websocket):
-    global latest_snapshot
+    global latest_snapshot, latest_market
     try:
         first = await asyncio.wait_for(websocket.recv(), timeout=15)
         auth = json.loads(first)
@@ -47,6 +50,8 @@ async def ws_handler(websocket):
         await websocket.send(json.dumps({"type": "status", "connected": True, "role": role}))
         if snapshot:
             await websocket.send(json.dumps({"type": "snapshot", "data": snapshot}))
+        if latest_market:
+            await websocket.send(json.dumps({"type": "market_update", "data": latest_market}))
 
         async for raw in websocket:
             if role != "capture":
@@ -54,6 +59,22 @@ async def ws_handler(websocket):
             try:
                 message = json.loads(raw)
             except json.JSONDecodeError:
+                continue
+            if message.get("type") == "market_update":
+                try:
+                    latest_market = normalize_market_update(message.get("data", {}))
+                except (TypeError, ValueError) as exc:
+                    await websocket.send(json.dumps({"type": "adapter_error", "message": str(exc)}))
+                    continue
+                outgoing = json.dumps({"type": "market_update", "data": latest_market})
+                async with state_lock:
+                    peers = list(clients)
+                for peer in peers:
+                    if peer is not websocket:
+                        try:
+                            await peer.send(outgoing)
+                        except Exception:
+                            pass
                 continue
             if message.get("type") != "visible_snapshot":
                 continue
