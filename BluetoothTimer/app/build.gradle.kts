@@ -10,9 +10,11 @@ android {
     defaultConfig {
         applicationId = "com.example.bluetoothtimer"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // API 32 preserves BluetoothAdapter.disable() compatibility on Android 13+.
+        // This app is distributed as a sideloaded APK, not through Google Play.
+        targetSdk = 32
+        versionCode = 2
+        versionName = "1.1"
     }
 
     compileOptions {
