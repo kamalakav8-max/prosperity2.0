@@ -66,7 +66,8 @@ function showMarket(d){
     box.append(label,value);return box;
   }));
   const depth=d.depth||{},rows=[...(depth.buy||[]).map(x=>["BUY",x.price,x.quantity]),...(depth.sell||[]).map(x=>["SELL",x.price,x.quantity])];
-  marketDepth.textContent=rows.length?"Depth · "+rows.map(x=>x.join(" / ")).join("  |  "):"No depth values in this update.";\n  const pat=d.pattern||{};if(pat.name){const note=document.createElement("p");note.textContent="Pattern: "+pat.name+" · "+(pat.trend||"")+" · Entry "+(pat.entry??"—")+" · SL "+(pat.stop_loss??"—")+" · Target "+(pat.target??"—");marketDepth.appendChild(note);}
+  marketDepth.textContent=rows.length?"Depth · "+rows.map(x=>x.join(" / ")).join("  |  "):"No depth values in this update.";
+  const pat=d.pattern||{};if(pat.name){const note=document.createElement("p");note.textContent="Pattern: "+pat.name+" · "+(pat.trend||"")+" · Entry "+(pat.entry??"—")+" · SL "+(pat.stop_loss??"—")+" · Target "+(pat.target??"—");marketDepth.appendChild(note);}
 }
 tokenEl.value=sessionStorage.getItem("prosperityToken")||"";
 function connect(){
