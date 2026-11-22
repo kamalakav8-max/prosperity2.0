@@ -58,7 +58,7 @@ const marketDepth=document.getElementById("marketDepth");
 function showMarket(d){
   const p=d.price||{},g=d.greeks||{},s=(d.straddle||{}).close||{};
   marketMeta.textContent=(d.symbol||"")+" · "+(d.exchange||"")+" · "+(d.captured_at||"");
-  const values=[["LTP",p.ltp],["Open",p.open],["High",p.high],["Low",p.low],["Volume",p.volume],["Open interest",p.open_interest],["Delta",g.delta],["Gamma",g.gamma],["Theta",g.theta],["Vega",g.vega],["IV",g.iv],["CE close",s.ce],["PE close",s.pe],["Synthetic future",s.synthetic_future]];
+  const values=[["Index value",d.index_value],["LTP",p.ltp],["Open",p.open],["High",p.high],["Low",p.low],["Volume",p.volume],["Open interest",p.open_interest],["Delta",g.delta],["Gamma",g.gamma],["Theta",g.theta],["Vega",g.vega],["IV",g.iv],["CE close",s.ce],["PE close",s.pe],["Synthetic future",s.synthetic_future]];
   marketGrid.replaceChildren(...values.filter(v=>v[1]!==null&&v[1]!==undefined).map(v=>{
     const box=document.createElement("div");box.className="metric";
     const label=document.createElement("span");label.textContent=v[0];
@@ -66,7 +66,7 @@ function showMarket(d){
     box.append(label,value);return box;
   }));
   const depth=d.depth||{},rows=[...(depth.buy||[]).map(x=>["BUY",x.price,x.quantity]),...(depth.sell||[]).map(x=>["SELL",x.price,x.quantity])];
-  marketDepth.textContent=rows.length?"Depth · "+rows.map(x=>x.join(" / ")).join("  |  "):"No depth values in this update.";
+  marketDepth.textContent=rows.length?"Depth · "+rows.map(x=>x.join(" / ")).join("  |  "):"No depth values in this update.";\n  const pat=d.pattern||{};if(pat.name){const note=document.createElement("p");note.textContent="Pattern: "+pat.name+" · "+(pat.trend||"")+" · Entry "+(pat.entry??"—")+" · SL "+(pat.stop_loss??"—")+" · Target "+(pat.target??"—");marketDepth.appendChild(note);}
 }
 tokenEl.value=sessionStorage.getItem("prosperityToken")||"";
 function connect(){
