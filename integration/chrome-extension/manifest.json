@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Prosperity Visible Market Capture",
+  "version": "0.1.0",
+  "description": "User-controlled relay of visible market-page text to a local Prosperity bridge.",
+  "permissions": ["activeTab"],
+  "host_permissions": ["https://*.groww.in/*", "ws://127.0.0.1:8766/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://*.groww.in/*"],
+      "js": ["config.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
