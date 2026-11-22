@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.bluetooth.BluetoothAdapter
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -65,7 +66,7 @@ class MainActivity : Activity() {
         page.addView(title, matchWrap())
 
         val subtitle = TextView(this).apply {
-            text = "Choose when you want Bluetooth to switch off"
+            text = "Bluetooth will switch OFF when your countdown ends"
             textSize = 15f
             setTextColor(0xFF596579.toInt())
             gravity = Gravity.CENTER
@@ -136,7 +137,7 @@ class MainActivity : Activity() {
         page.addView(cancel, matchWrap())
 
         val note = TextView(this).apply {
-            text = "When time expires, a notification opens Bluetooth settings. Android requires you to confirm switching Bluetooth off."
+            text = "Grant Nearby devices permission when asked. At expiry, the app requests Bluetooth OFF directly."
             textSize = 13f
             setTextColor(0xFF596579.toInt())
             gravity = Gravity.CENTER
@@ -147,6 +148,14 @@ class MainActivity : Activity() {
     }
 
     private fun startTimer(minutes: Int) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.BLUETOOTH_CONNECT), 201)
+            Toast.makeText(this, "Allow Nearby devices, then tap Start again.", Toast.LENGTH_LONG).show()
+            return
+        }
+
         val alarm = getSystemService(ALARM_SERVICE) as AlarmManager
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarm.canScheduleExactAlarms()) {
             Toast.makeText(this, "Allow Alarms & reminders, then tap Start again.", Toast.LENGTH_LONG).show()
@@ -163,7 +172,7 @@ class MainActivity : Activity() {
             AlarmManager.RTC_WAKEUP, endAt, alarmPendingIntent()
         )
         refreshCountdown()
-        Toast.makeText(this, "Timer started for $minutes minutes", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Bluetooth will turn OFF in $minutes minutes", Toast.LENGTH_SHORT).show()
     }
 
     private fun cancelTimer() {
