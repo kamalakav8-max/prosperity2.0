@@ -16,6 +16,7 @@ TOKEN = os.getenv("PROSPERITY_BRIDGE_TOKEN", "")
 MAX_BODY = 1_000_000
 _lock = threading.Lock()
 _latest: dict[str, dict] = {}
+_market_snapshot: dict = {"updatedAt": None, "status": None, "movers": None, "source": "NSE CM Market MCP"}
 _subscribers: set[queue.Queue] = set()
 
 
@@ -71,6 +72,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Cache-Control", "no-store")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.end_headers()
         self.wfile.write(data)
 
@@ -84,12 +88,24 @@ class Handler(BaseHTTPRequestHandler):
             return False
         return True
 
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Max-Age", "600")
+        self.end_headers()
+
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/health":
             return self._json(200, {"ok": True, "service": "Prosperity LAN bridge"})
         if not self._authorized():
             return
+        if parsed.path == "/v1/market-snapshot":
+            with _lock:
+                snapshot = dict(_market_snapshot)
+            return self._json(200, {"ok": True, **snapshot})
         if parsed.path == "/v1/snapshot":
             with _lock:
                 items = list(_latest.values())
@@ -126,7 +142,8 @@ class Handler(BaseHTTPRequestHandler):
         self._json(404, {"ok": False, "error": "Not found"})
 
     def do_POST(self):
-        if urlparse(self.path).path != "/v1/ingest":
+        path = urlparse(self.path).path
+        if path not in ("/v1/ingest", "/v1/market-ingest"):
             return self._json(404, {"ok": False, "error": "Not found"})
         if not self._authorized():
             return
@@ -135,6 +152,24 @@ class Handler(BaseHTTPRequestHandler):
             if size <= 0 or size > MAX_BODY:
                 return self._json(413, {"ok": False, "error": "Body must be 1 byte to 1 MB"})
             body = json.loads(self.rfile.read(size))
+            if path == "/v1/market-ingest":
+                if not isinstance(body, dict) or not any(key in body for key in ("status", "movers")):
+                    return self._json(400, {"ok": False, "error": "Expected status and/or movers object"})
+                stamp = int(time.time() * 1000)
+                with _lock:
+                    _market_snapshot.update({
+                        "updatedAt": stamp,
+                        "status": body.get("status", _market_snapshot.get("status")),
+                        "movers": body.get("movers", _market_snapshot.get("movers")),
+                        "nseUpdatedAt": body.get("nseUpdatedAt"),
+                    })
+                    event = {"type": "nse_market", **_market_snapshot}
+                    for subscriber in tuple(_subscribers):
+                        try:
+                            subscriber.put_nowait(event)
+                        except queue.Full:
+                            pass
+                return self._json(202, {"ok": True, "updatedAt": stamp})
             instruments = body.get("instruments") if isinstance(body, dict) else None
             if not isinstance(instruments, list) or not instruments or not all(valid_instrument(x) for x in instruments):
                 return self._json(400, {"ok": False, "error": "Expected non-empty instruments array with valid symbols, type, ltp and levels"})
