@@ -49,9 +49,8 @@ class LanBridgeClient {
                     delayMs = 1500L
                     main.post { listener.onState("Connected to Windows bridge") }
                     BufferedReader(InputStreamReader(conn.inputStream)).use { reader ->
-                        var line: String?
-                        while (running.get() && reader.readLine().also { line = it } != null) {
-                            val value = line ?: continue
+                        while (running.get()) {
+                            val value = reader.readLine() ?: break
                             if (value.startsWith("data:")) {
                                 val json = value.removePrefix("data:").trim()
                                 if (json.isNotEmpty()) {
