@@ -1,0 +1,6 @@
+# Local-only configuration and credentials
+.env
+levels.json
+*.log
+__pycache__/
+*.py[cod]
