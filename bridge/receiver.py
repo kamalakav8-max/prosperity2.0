@@ -40,6 +40,22 @@ def valid_instrument(item: dict) -> bool:
         value = levels.get(key)
         if value is not None and (not isinstance(value, (int, float)) or value <= 0):
             return False
+    pivots = levels.get("pivots", {})
+    allowed_pivots = {"P", "R1", "R2", "R3", "R4", "R5", "S1", "S2", "S3", "S4", "S5"}
+    if not isinstance(pivots, dict) or any(
+        key not in allowed_pivots or not isinstance(value, (int, float)) or value <= 0
+        for key, value in pivots.items()
+    ):
+        return False
+    candle = item.get("candle")
+    if candle is not None:
+        if not isinstance(candle, dict):
+            return False
+        values = [candle.get(key) for key in ("open", "high", "low", "close")]
+        if any(not isinstance(value, (int, float)) or value <= 0 for value in values):
+            return False
+        if candle["high"] < candle["low"]:
+            return False
     return True
 
 
