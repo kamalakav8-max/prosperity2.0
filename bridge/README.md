@@ -123,7 +123,7 @@ After starting `receiver.py` in one PowerShell window, open a second PowerShell 
 ```powershell
 $env:PROSPERITY_BRIDGE_TOKEN = "the-same-long-random-secret"
 $env:PROSPERITY_BRIDGE_URL = "http://192.168.1.10:8765"
-python .\\nse_cm_poller.py
+python .\nse_cm_poller.py
 ```
 
 Replace `192.168.1.10` with your actual Windows IPv4 address. The poller discovers the published CM Market tools, calls `cm_get_data_status` and `nse_get_market_movers` for NIFTY, and publishes the result to the authenticated bridge. It polls at least once every 60 seconds; NSE's own mover cache refreshes about every five minutes.
