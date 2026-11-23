@@ -1,0 +1,22 @@
+name: Validate Prosperity Kotak adapter
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "bridge/kotak_neo_adapter.py"
+      - "bridge/receiver.py"
+      - "bridge/requirements.txt"
+      - ".github/workflows/kotak-adapter-check.yml"
+  workflow_dispatch:
+
+jobs:
+  python-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile adapter and bridge
+        run: python -m py_compile bridge/kotak_neo_adapter.py bridge/receiver.py
