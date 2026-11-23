@@ -128,11 +128,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun SweepApp() {
-    var underlying by remember { mutableStateOf("NIFTY") }
-    var expiry by remember { mutableStateOf("") }
-    val strikes = listOf(25900, 25950, 26000, 26050, 26100, 26150, 26200)
-    val selected = remember { mutableStateListOf<ContractChoice>() }
     var monitoring by remember { mutableStateOf(false) }
+    val currentMonitoring = rememberUpdatedState(monitoring)
     var bridgeUrl by remember { mutableStateOf("http://192.168.1.100:8765") }
     var bridgeToken by remember { mutableStateOf("") }
     var bridgeStatus by remember { mutableStateOf("Disconnected") }
@@ -156,81 +153,24 @@ fun SweepApp() {
                 )
             }
             item {
-                Text("Underlying", style = MaterialTheme.typography.titleMedium)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("NIFTY", "SENSEX").forEach { name ->
-                        FilterChip(
-                            selected = underlying == name,
-                            onClick = { underlying = name },
-                            label = { Text(name) }
-                        )
-                    }
-                }
-            }
-            item {
-                Text("Expiry", style = MaterialTheme.typography.titleMedium)
-                OutlinedTextField(
-                    value = expiry,
-                    onValueChange = { expiry = it },
-                    label = { Text("Expiry from connected option chain") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+                Text("Markets and contracts", style = MaterialTheme.typography.titleMedium)
+                Text("NIFTY 50 + SENSEX")
                 Text(
-                    "The Windows Kotak adapter streams the nearest-expiry contracts selected from the official option chain.",
+                    "The Windows Kotak adapter discovers the nearest-expiry CE/PE option chains and streams the subscribed contracts automatically. No manual strike selection is required.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            item { Text("Select strikes", style = MaterialTheme.typography.titleMedium) }
-            items(strikes) { strike ->
-                Card {
-                    Column(Modifier.fillMaxWidth().padding(12.dp)) {
-                        Text(strike.toString(), style = MaterialTheme.typography.titleMedium)
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            listOf("CE", "PE").forEach { side ->
-                                val isSelected = selected.any {
-                                    it.strike == strike && it.side == side
-                                }
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Checkbox(
-                                        checked = isSelected,
-                                        onCheckedChange = { checked ->
-                                            selected.removeAll {
-                                                it.strike == strike && it.side == side
-                                            }
-                                            if (checked) {
-                                                selected.add(
-                                                    ContractChoice(
-                                                        strike, side,
-                                                        "$underlying-$expiry-$strike-$side"
-                                                    )
-                                                )
-                                            }
-                                        }
-                                    )
-                                    Text(side)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
             item {
-                Text("Selected contracts: ${selected.size}")
                 Button(
                     onClick = { monitoring = !monitoring },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = selected.isNotEmpty()
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (monitoring) "Pause monitoring" else "Start monitoring")
+                    Text(if (monitoring) "Pause alerts" else "Start monitoring")
                 }
                 Text(
                     if (monitoring)
-                        "The bridge processes incoming NIFTY and SENSEX updates. Connect to the Windows bridge below."
-                    else "Select contracts, then start monitoring.",
+                        "Alerts are enabled for incoming NIFTY, SENSEX and subscribed option updates."
+                    else "Monitoring is paused. Connect the Windows bridge, then tap Start monitoring.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -273,6 +213,10 @@ fun SweepApp() {
                             override fun onData(payload: org.json.JSONObject) {
                                 val items = payload.optJSONArray("instruments")
                                 val count = items?.length() ?: 0
+                                if (!currentMonitoring.value) {
+                                    bridgeData = "$count instrument update(s) received. Alerts are paused."
+                                    return
+                                }
                                 if (items != null) {
                                     for (index in 0 until items.length()) {
                                         val item = items.optJSONObject(index) ?: continue
