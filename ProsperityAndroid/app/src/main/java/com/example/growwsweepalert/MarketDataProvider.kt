@@ -24,7 +24,7 @@ enum class ConnectionState { DISCONNECTED, CONNECTING, CONNECTED, ERROR }
 class NotConnectedProvider : MarketDataProvider {
     override suspend fun loadOptionChain(underlying: String): OptionChainSnapshot =
         throw IllegalStateException("Authorized 915/Groww option-chain provider is not configured.")
-    override suspend fun loadSpotIndices(): List<SpotInstrument> // NIFTY 50 and SENSEX only =
+    override suspend fun loadSpotIndices(): List<SpotInstrument> =
         throw IllegalStateException("Authorized spot-index provider is not configured.")
     override suspend fun subscribeOptions(contracts: List<OptionContract>, listener: MarketDataListener) {
         listener.onConnectionState(ConnectionState.ERROR, "Live option data adapter is not configured.")
