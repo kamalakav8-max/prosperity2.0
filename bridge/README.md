@@ -115,3 +115,19 @@ This server provides cash-market/index information with an approximately 1-3 min
 - A mapper from each discovered NSE tool's response schema into Prosperity's `/v1/ingest` format is the next integration step. It must be written against actual returned schemas; this repo does not guess undocumented tool names or data fields.
 
 The clients currently perform MCP discovery/calls and print the official server response. They do not yet run a continuous poller or automatically populate the dashboard. Keep option-chain data on a separate authorized derivatives adapter.
+
+## Run the automatic NSE CM Market poller
+
+After starting `receiver.py` in one PowerShell window, open a second PowerShell window in the same `bridge` folder. Set the bridge URL to your Windows PC's private Wi-Fi IPv4 address (use `ipconfig` to find it):
+
+```powershell
+$env:PROSPERITY_BRIDGE_TOKEN = "the-same-long-random-secret"
+$env:PROSPERITY_BRIDGE_URL = "http://192.168.1.10:8765"
+python .\\nse_cm_poller.py
+```
+
+Replace `192.168.1.10` with your actual Windows IPv4 address. The poller discovers the published CM Market tools, calls `cm_get_data_status` and `nse_get_market_movers` for NIFTY, and publishes the result to the authenticated bridge. It polls at least once every 60 seconds; NSE's own mover cache refreshes about every five minutes.
+
+In Prosperity, open **Data feed → NSE CM Market bridge**, enter the same bridge URL and token, then select **Connect NSE pulse**. The dashboard refreshes the market pulse once per minute.
+
+**Scope limitation:** the CM Market MCP tool catalogue includes cash-market stock quotes, market movers and segment listings, but does not expose NIFTY/SENSEX index spot values, intraday candles or F&O option-chain fields. The dashboard therefore shows NSE's NIFTY constituent gainers/losers and feed freshness, without pretending these are index values. SENSEX and CE/PE feeds still require a separate authorized source.
