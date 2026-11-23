@@ -59,7 +59,8 @@ $env:KOTAK_CHAIN_COUNT = "20"
 2. On Android, open Prosperity and enter http://WINDOWS-PC-IP:8765.
 3. Enter the same bridge token.
 4. Tap Connect.
-5. Keep both Windows processes running.
+5. Tap Start monitoring in the Android app to enable notifications.
+6. Keep both Windows processes running.
 
 The adapter sends live index/option prices and completed 5-minute candles. Android alerts require verified levels in the local levels.json. Restart the adapter after editing that file.
 
