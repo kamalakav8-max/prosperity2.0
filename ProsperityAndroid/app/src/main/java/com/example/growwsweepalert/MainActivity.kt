@@ -131,6 +131,11 @@ fun SweepApp() {
     val strikes = listOf(25900, 25950, 26000, 26050, 26100, 26150, 26200)
     val selected = remember { mutableStateListOf<ContractChoice>() }
     var monitoring by remember { mutableStateOf(false) }
+    var bridgeUrl by remember { mutableStateOf("http://192.168.1.100:8765") }
+    var bridgeToken by remember { mutableStateOf("") }
+    var bridgeStatus by remember { mutableStateOf("Disconnected") }
+    var bridgeData by remember { mutableStateOf("No live data received yet") }
+    var bridgeClient by remember { mutableStateOf<LanBridgeClient?>(null) }
 
     Scaffold { padding ->
         LazyColumn(
@@ -232,6 +237,50 @@ fun SweepApp() {
                 Text("Each alert records contract, level, direction, observed price, detection type and time.")
                 Text(
                     "Watched levels: 915 Previous Day High, Previous Day Low, Previous Week High and Previous Week Low.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            item {
+                HorizontalDivider()
+                Text("Windows LAN bridge", style = MaterialTheme.typography.titleMedium)
+                OutlinedTextField(
+                    value = bridgeUrl,
+                    onValueChange = { bridgeUrl = it },
+                    label = { Text("Windows PC address (e.g. http://192.168.1.10:8765)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = bridgeToken,
+                    onValueChange = { bridgeToken = it },
+                    label = { Text("Shared bridge token") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = {
+                        bridgeClient?.close()
+                        val client = LanBridgeClient()
+                        bridgeClient = client
+                        client.connect(bridgeUrl, bridgeToken, object : LanBridgeClient.Listener {
+                            override fun onState(state: String) { bridgeStatus = state }
+                            override fun onData(payload: org.json.JSONObject) {
+                                val items = payload.optJSONArray("instruments")
+                                val count = items?.length() ?: 0
+                                bridgeData = count.toString() + " instrument update(s): " + payload.toString().take(360)
+                            }
+                        })
+                    }) { Text("Connect") }
+                    OutlinedButton(onClick = {
+                        bridgeClient?.close()
+                        bridgeClient = null
+                        bridgeStatus = "Disconnected"
+                    }) { Text("Disconnect") }
+                }
+                Text("Status: " + bridgeStatus, style = MaterialTheme.typography.bodyMedium)
+                Text(bridgeData, style = MaterialTheme.typography.bodySmall)
+                Text(
+                    "Connect your Windows PC and phone to the same private Wi-Fi. A separate authorized provider must send data to the Windows receiver.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
