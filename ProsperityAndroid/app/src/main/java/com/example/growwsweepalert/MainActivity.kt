@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
 data class ContractChoice(val strike: Int, val side: String, val symbol: String)
@@ -136,6 +137,10 @@ fun SweepApp() {
     var bridgeStatus by remember { mutableStateOf("Disconnected") }
     var bridgeData by remember { mutableStateOf("No live data received yet") }
     var bridgeClient by remember { mutableStateOf<LanBridgeClient?>(null) }
+    val context = LocalContext.current
+    val sweepDetector = remember { SweepDetector() }
+    val alertNotifications = remember(context) { AlertNotifications(context) }
+    LaunchedEffect(alertNotifications) { alertNotifications.createChannel() }
 
     Scaffold { padding ->
         LazyColumn(
@@ -267,6 +272,44 @@ fun SweepApp() {
                             override fun onData(payload: org.json.JSONObject) {
                                 val items = payload.optJSONArray("instruments")
                                 val count = items?.length() ?: 0
+                                if (items != null) {
+                                    for (index in 0 until items.length()) {
+                                        val item = items.optJSONObject(index) ?: continue
+                                        val levelsJson = item.optJSONObject("levels") ?: org.json.JSONObject()
+                                        fun level(key: String): Double? {
+                                            val value = levelsJson.optDouble(key, Double.NaN)
+                                            return value.takeIf { it.isFinite() && it > 0.0 }
+                                        }
+                                        val symbol = item.optString("symbol")
+                                        val ltp = item.optDouble("ltp", Double.NaN)
+                                        if (symbol.isBlank() || !ltp.isFinite() || ltp <= 0.0) continue
+                                        val levels = ContractLevels(
+                                            pdh = level("pdh"),
+                                            pdl = level("pdl"),
+                                            pwh = level("pwh"),
+                                            pwl = level("pwl")
+                                        )
+                                        val instrumentType = if (item.optString("type") == "SPOT_INDEX") {
+                                            InstrumentType.SPOT_INDEX
+                                        } else {
+                                            InstrumentType.OPTION
+                                        }
+                                        sweepDetector.onLivePrice(symbol, ltp, levels).forEach { event ->
+                                            alertNotifications.show(
+                                                SweepAlert(
+                                                    symbol = event.symbol,
+                                                    instrumentType = instrumentType,
+                                                    levelName = event.levelName,
+                                                    level = event.level,
+                                                    observedPrice = event.observedPrice,
+                                                    direction = if (event.direction == "UP") SweepDirection.UP else SweepDirection.DOWN,
+                                                    detectionKind = DetectionKind.LIVE_PRICE_CROSS,
+                                                    timestampMillis = event.timestampMillis
+                                                )
+                                            )
+                                        }
+                                    }
+                                }
                                 bridgeData = count.toString() + " instrument update(s): " + payload.toString().take(360)
                             }
                         })
