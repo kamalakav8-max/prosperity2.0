@@ -1,0 +1,11 @@
+{
+  "underlyings": {
+    "NIFTY": {"pdh": null, "pdl": null, "pdc": null, "pwh": null, "pwl": null},
+    "SENSEX": {"pdh": null, "pdl": null, "pdc": null, "pwh": null, "pwl": null}
+  },
+  "options": {
+    "REPLACE_WITH_EXACT_KOTAK_OPTION_SYMBOL": {
+      "pdh": null, "pdl": null, "pdc": null, "pwh": null, "pwl": null
+    }
+  }
+}
