@@ -10,6 +10,11 @@ Browser-based market monitoring app. This repository hosts the standalone Prospe
 - Completed-candle high-sweep and low-sweep rejection detection.
 - Browser notification support and demo signal.
 - Authorized secure WebSocket feed adapter; no order execution.
+- Official Kotak Neo Python SDK adapter for NIFTY, SENSEX and option-chain streaming.
+- Windows-to-Android private-LAN bridge with completed 5-minute candles.
+- Private local levels configuration and signal-only alerts.
+
+See [Kotak Neo setup instructions](bridge/KOTAK_SETUP.md).
 
 ## Feed format
 Send JSON like:
