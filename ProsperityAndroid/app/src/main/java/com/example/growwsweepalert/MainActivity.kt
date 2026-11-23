@@ -19,7 +19,8 @@ data class ContractLevels(
     val pdh: Double?,
     val pdl: Double?,
     val pwh: Double?,
-    val pwl: Double?
+    val pwl: Double?,
+    val pivots: Map<String, Double> = emptyMap()
 )
 
 enum class SweepType { LIVE_PRICE, CANDLE_WICK }
@@ -57,7 +58,7 @@ class SweepDetector {
         "Previous Day Low" to levels.pdl,
         "Previous Week High" to levels.pwh,
         "Previous Week Low" to levels.pwl
-    )
+    ) + levels.pivots.map { it.key to it.value }
 
     fun onLivePrice(
         symbol: String,
@@ -283,30 +284,67 @@ fun SweepApp() {
                                         val symbol = item.optString("symbol")
                                         val ltp = item.optDouble("ltp", Double.NaN)
                                         if (symbol.isBlank() || !ltp.isFinite() || ltp <= 0.0) continue
+                                        val pivotsJson = levelsJson.optJSONObject("pivots")
+                                        val pivotValues = mutableMapOf<String, Double>()
+                                        pivotsJson?.let { pivots ->
+                                            val keys = pivots.keys()
+                                            while (keys.hasNext()) {
+                                                val key = keys.next()
+                                                val value = pivots.optDouble(key, Double.NaN)
+                                                if (key in setOf("P", "R1", "R2", "R3", "R4", "R5", "S1", "S2", "S3", "S4", "S5") &&
+                                                    value.isFinite() && value > 0.0) {
+                                                    pivotValues[key] = value
+                                                }
+                                            }
+                                        }
                                         val levels = ContractLevels(
                                             pdh = level("pdh"),
                                             pdl = level("pdl"),
                                             pwh = level("pwh"),
-                                            pwl = level("pwl")
+                                            pwl = level("pwl"),
+                                            pivots = pivotValues
                                         )
                                         val instrumentType = if (item.optString("type") == "SPOT_INDEX") {
                                             InstrumentType.SPOT_INDEX
                                         } else {
                                             InstrumentType.OPTION
                                         }
-                                        sweepDetector.onLivePrice(symbol, ltp, levels).forEach { event ->
-                                            alertNotifications.show(
-                                                SweepAlert(
-                                                    symbol = event.symbol,
-                                                    instrumentType = instrumentType,
-                                                    levelName = event.levelName,
-                                                    level = event.level,
-                                                    observedPrice = event.observedPrice,
-                                                    direction = if (event.direction == "UP") SweepDirection.UP else SweepDirection.DOWN,
-                                                    detectionKind = DetectionKind.LIVE_PRICE_CROSS,
-                                                    timestampMillis = event.timestampMillis
+                                        fun notifyEvents(events: List<SweepEvent>, detection: DetectionKind) {
+                                            events.forEach { event ->
+                                                alertNotifications.show(
+                                                    SweepAlert(
+                                                        symbol = event.symbol,
+                                                        instrumentType = instrumentType,
+                                                        levelName = event.levelName,
+                                                        level = event.level,
+                                                        observedPrice = event.observedPrice,
+                                                        direction = if (event.direction == "UP") SweepDirection.UP else SweepDirection.DOWN,
+                                                        detectionKind = detection,
+                                                        timestampMillis = event.timestampMillis
+                                                    )
                                                 )
-                                            )
+                                            }
+                                        }
+                                        notifyEvents(
+                                            sweepDetector.onLivePrice(symbol, ltp, levels),
+                                            DetectionKind.LIVE_PRICE_CROSS
+                                        )
+                                        val candle = item.optJSONObject("candle")
+                                        if (candle != null) {
+                                            val open = candle.optDouble("open", Double.NaN)
+                                            val high = candle.optDouble("high", Double.NaN)
+                                            val low = candle.optDouble("low", Double.NaN)
+                                            val close = candle.optDouble("close", Double.NaN)
+                                            if (open.isFinite() && high.isFinite() && low.isFinite() && close.isFinite()) {
+                                                notifyEvents(
+                                                    sweepDetector.onCandle(
+                                                        symbol,
+                                                        candle.optLong("timestamp", item.optLong("timestamp", System.currentTimeMillis())),
+                                                        open, high, low, close, levels
+                                                    ),
+                                                    DetectionKind.CANDLE_WICK_SWEEP
+                                                )
+                                            }
                                         }
                                     }
                                 }
