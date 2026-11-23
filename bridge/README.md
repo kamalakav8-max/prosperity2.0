@@ -131,3 +131,19 @@ Replace `192.168.1.10` with your actual Windows IPv4 address. The poller discove
 In Prosperity, open **Data feed → NSE CM Market bridge**, enter the same bridge URL and token, then select **Connect NSE pulse**. The dashboard refreshes the market pulse once per minute.
 
 **Scope limitation:** the CM Market MCP tool catalogue includes cash-market stock quotes, market movers and segment listings, but does not expose NIFTY/SENSEX index spot values, intraday candles or F&O option-chain fields. The dashboard therefore shows NSE's NIFTY constituent gainers/losers and feed freshness, without pretending these are index values. SENSEX and CE/PE feeds still require a separate authorized source.
+
+## Open the dashboard over your home Wi-Fi
+
+If you open Prosperity from an HTTPS-hosted site, the browser may block requests to your local HTTP bridge. For a simple home-Wi-Fi setup, serve the dashboard from your Windows PC over HTTP:
+
+1. Open PowerShell in the repository root (the folder containing `index.html`).
+2. Run:
+
+```powershell
+python -m http.server 8000 --bind 0.0.0.0
+```
+
+3. Allow TCP port 8000 on Private Windows networks only.
+4. On your phone or PC connected to the same Wi-Fi, open `http://WINDOWS-PC-IP:8000`.
+
+Use the same Windows PC IP with port 8765 in Prosperity's NSE bridge URL. Keep both ports restricted to your trusted private home network; do not port-forward them to the internet.
