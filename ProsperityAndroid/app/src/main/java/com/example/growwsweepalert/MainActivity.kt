@@ -149,9 +149,9 @@ fun SweepApp() {
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Text("GROWW SWEEP ALERT", style = MaterialTheme.typography.headlineSmall)
+                Text("PROSPERITY 2.0", style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "Companion monitor • No order execution",
+                    "Kotak Neo market monitor • Signal alerts only • No order execution",
                     style = MaterialTheme.typography.bodyMedium
                 )
             }
@@ -177,7 +177,7 @@ fun SweepApp() {
                     singleLine = true
                 )
                 Text(
-                    "Live expiries will be populated by the authorized option-chain connection.",
+                    "The Windows Kotak adapter streams the nearest-expiry contracts selected from the official option chain.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -229,7 +229,7 @@ fun SweepApp() {
                 }
                 Text(
                     if (monitoring)
-                        "Monitoring is armed in the interface. Live data connection is still required."
+                        "The bridge processes incoming NIFTY and SENSEX updates. Connect to the Windows bridge below."
                     else "Select contracts, then start monitoring.",
                     style = MaterialTheme.typography.bodySmall
                 )
@@ -242,7 +242,7 @@ fun SweepApp() {
                 Text("• Candle-wick sweep: alert when a candle high/low crosses a level from the previous candle close.")
                 Text("Each alert records contract, level, direction, observed price, detection type and time.")
                 Text(
-                    "Watched levels: 915 Previous Day High, Previous Day Low, Previous Week High and Previous Week Low.",
+                    "Watched levels: verified PDH, PDL, PWH, PWL and classic pivots loaded from your private Windows levels.json file.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -368,7 +368,7 @@ fun SweepApp() {
             item {
                 HorizontalDivider()
                 Text("Alert history", style = MaterialTheme.typography.titleMedium)
-                Text("No alerts yet. The data adapter and Android notification delivery are not connected.")
+                Text("Alerts appear as Android notifications when incoming prices or completed 5-minute candles cross configured reference levels.")
             }
         }
     }
