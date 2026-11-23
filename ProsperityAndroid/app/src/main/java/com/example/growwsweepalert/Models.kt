@@ -1,6 +1,7 @@
 package com.example.growwsweepalert
 
-enum class SupportedUnderlying { NIFTY, SENSEX }\nenum class OptionType { CE, PE }
+enum class SupportedUnderlying { NIFTY, SENSEX }
+enum class OptionType { CE, PE }
 enum class InstrumentType { SPOT_INDEX, OPTION }
 enum class DetectionKind { LIVE_PRICE_CROSS, CANDLE_WICK_SWEEP }
 enum class SweepDirection { UP, DOWN }
