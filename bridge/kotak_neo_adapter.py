@@ -163,9 +163,11 @@ async def stream_market(client, subscriptions, levels_config):
     candle_builder = CandleBuilder()
 
     def levels_for(symbol: str, underlying: str) -> dict:
-        raw = levels_config.get("options", {}).get(
-            symbol, levels_config.get("underlyings", {}).get(underlying, {})
-        )
+        # Never apply index-price levels to an option premium.
+        if symbol in ("NIFTY", "SENSEX"):
+            raw = levels_config.get("underlyings", {}).get(underlying, {})
+        else:
+            raw = levels_config.get("options", {}).get(symbol, {})
         return normalize_levels(raw)
 
     async with client.create_websocket() as ws:
