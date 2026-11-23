@@ -62,3 +62,27 @@ Example ingest body:
 ```
 
 The Android app still needs its LAN client wired to these endpoints. A separate authorized source adapter is also required before any real 915/Groww data will arrive. The 915 APK inspection identified socket/NATS and Protobuf components, but does not grant permission to reuse private endpoints or authentication material.
+
+## NSE Bhavcopy MCP connection
+
+Prosperity now includes `nse_bhavcopy.py`, a client for NSE's official public Streamable HTTP MCP endpoint:
+`https://mcp.nseindia.in/bhavcopy/cm/mcp`.
+
+Install its dependency and discover the exact tools and input schemas published by NSE:
+
+```powershell
+python -m pip install -r .\\requirements.txt
+python .\\nse_bhavcopy.py --list-tools
+```
+
+Then call a discovered tool using its exact name and schema:
+
+```powershell
+python .\\nse_bhavcopy.py --tool TOOL_NAME --args-json '{}'
+```
+
+Replace `TOOL_NAME` and the JSON object with the tool name and required arguments shown by `--list-tools`. The client deliberately does not guess NSE tool names or parameters.
+
+**Data limitation:** this Bhavcopy MCP server provides historical end-of-day Capital Market data (up to five years, updated with the prior trading day's final values). It is useful for historical OHLCV, previous-session references and research. It is not a live NIFTY/SENSEX feed and does not provide F&O option-chain fields such as CE/PE LTP, OI, change in OI or IV. For delayed intraday CM snapshots, NSE publishes a separate endpoint at `https://mcp.nseindia.in/cmmkt/mcp`; that is also not a tick-by-tick F&O feed.
+
+The MCP client is a first integration step. It discovers and retrieves NSE Bhavcopy results; a schema-specific mapper is still needed to convert a selected tool's returned result into Prosperity's normalized `/v1/ingest` format. Do not treat EOD Bhavcopy values as current live prices.
