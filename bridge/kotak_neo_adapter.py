@@ -266,6 +266,8 @@ def main():
         rows = chain_rows(client, underlying, exchange)
         chains.extend(rows)
         print(f"{underlying}: {len(rows)} contracts · expiry {rows[0].get('expiry') or 'nearest available'}")
+        for row in rows:
+            print(f"  {row['symbol']} · {row['side']} · strike {row['strike']}")
 
     levels_config = load_levels()
     asyncio.run(stream_market(client, chains, levels_config))
